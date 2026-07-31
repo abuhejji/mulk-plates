@@ -110,7 +110,7 @@
       Object.keys(EM).forEach(function(name){var e=EM[name];
         out[name]={W:540,H:120,def:"51651",svg:function(n){var s=fit(n,74),cy=60+s*0.35;
           var head=e.red?'<rect x="6" y="6" width="210" height="42" rx="6" fill="#d21e2b"/>'+txt(e.ar+" · U.A.E",16,34,15,"#fff","start",'')+'<rect x="158" y="12" width="52" height="30" rx="4" fill="#fff"/>'+txt(e.code,184,35,20,"#d21e2b","middle",'font-weight="800"'):txt(name.toUpperCase()+" · "+e.ar,16,34,16,"#141414","start",'')+txt(e.code,524,36,24,"#141414","end",'font-weight="800"');
-          return '<svg viewBox="0 0 540 120"><rect x="2" y="2" width="536" height="116" rx="11" fill="#f7f7f4" stroke="#141414" stroke-width="3"/>'+head+emb(n,290,cy+8,s,"#141414","middle",2)+'</svg>';};});
+          return '<svg viewBox="0 0 540 120"><rect x="2" y="2" width="536" height="116" rx="11" fill="#f7f7f4" stroke="#141414" stroke-width="3"/>'+head+emb(n,290,cy+8,s,"#141414","middle",2)+'</svg>';}};});
       return out;
     })()}
   };
