@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Mulk · GCC Number Plates</title>
+<style>
+  :root{--bg:#070d1a;--card:#0d1526;--gold:#c9a24b;--mut:#8b99b8;--navy:#1a2a5e}
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{background:var(--bg);color:#f2f5fa;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  #app{max-width:760px;margin:0 auto;padding:22px 16px 40px}
+  .top{display:flex;align-items:baseline;justify-content:space-between;padding:6px 2px 16px}
+  .wordmark{font-size:20px;font-weight:800;letter-spacing:.24em}.wordmark span{color:var(--gold)}
+  .top .sub{font-size:12px;color:var(--mut)}
+  h1{font-size:15px;font-weight:700;margin:2px 2px 2px}
+  .lead{color:var(--mut);font-size:12.5px;margin:0 2px 14px}
+  #stage{position:relative;height:330px;border-radius:20px;background:radial-gradient(120% 100% at 50% 12%,#17253f 0%,#0a1120 55%,#05070f 100%);display:flex;align-items:center;justify-content:center;overflow:hidden;perspective:1600px}
+  #scene{transform-style:preserve-3d;transform:scale(.9)}
+  #cuboid{position:relative;transform-style:preserve-3d;will-change:transform}
+  #shadow{position:absolute;bottom:40px;left:50%;width:330px;height:30px;transform:translateX(-50%);background:radial-gradient(ellipse at center,rgba(0,0,0,.6),transparent 70%);filter:blur(3px)}
+  .face{position:absolute;top:50%;left:50%;backface-visibility:hidden;overflow:hidden;border-radius:8px}
+  .face svg{display:block;width:100%;height:100%}
+  .edge{position:absolute;top:50%;left:50%}
+  .row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:10px}
+  .chip{cursor:pointer;border:1px solid rgba(255,255,255,.14);background:var(--card);color:#f2f5fa;font-size:12px;font-weight:600;padding:7px 12px;border-radius:999px;transition:.18s;user-select:none}
+  .chip:hover{border-color:var(--gold)}.chip.on{background:var(--gold);color:#0a1120;border-color:var(--gold)}
+  #types .chip{font-size:11.5px;padding:6px 11px;background:#0b1120;color:#c7d0e2}
+  #types .chip.on{background:#26406e;color:#fff;border-color:#3a5a94}
+  .controls{align-items:center;margin-top:14px}
+  .field{display:flex;gap:6px;align-items:center;background:var(--card);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:5px 6px 5px 13px}
+  .field label{font-size:11px;color:var(--mut)}
+  .field input{background:transparent;border:0;color:#f2f5fa;font-size:14px;font-weight:800;letter-spacing:.1em;width:96px;outline:none}
+  .seg{display:inline-flex;background:var(--card);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:3px}
+  .seg button{border:0;background:transparent;color:var(--mut);font-weight:700;font-size:12px;padding:6px 11px;border-radius:999px;cursor:pointer;font-family:inherit}
+  .seg button.on{background:var(--gold);color:#0a1120}
+  .cap{text-align:center;color:var(--mut);font-size:11px;margin-top:12px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="top"><div class="wordmark">MULK<span>.</span></div><div class="sub">Possession preview</div></div>
+  <h1>GCC number plates — a rotatable collectible for your wallet</h1>
+  <p class="lead">Every private-plate format across the six states, at true proportions. Pick a country and type, set your number, and rotate.</p>
+
+  <div id="stage"><div id="scene"><div id="cuboid"></div></div><div id="shadow"></div></div>
+  <div class="row" id="countries"></div>
+  <div class="row" id="types"></div>
+  <div class="row controls">
+    <div class="field"><label>No.</label><input id="num" value="344992" maxlength="7" autocomplete="off"></div>
+    <div class="seg" id="frames"><button data-f="black" class="on">Black</button><button data-f="steel">Chrome</button><button data-f="gold">Gold</button></div>
+    <button id="spin" class="chip on">⏸ Spin</button>
+  </div>
+  <p class="cap">Private plates only · proportions reflect real plates · emblems &amp; typeface are close approximations of official artwork.</p>
+</div>
+
+<script>
+(function(){
+  var D=15, NAVY="#1a2a5e", AR="٠١٢٣٤٥٦٧٨٩";
+  function toAr(s){return (''+s).replace(/[0-9]/g,function(d){return AR[+d];});}
+  function emb(t,x,y,s,fill,anchor,ls){var a=anchor||"middle",f=' font-family="Arial, Helvetica, sans-serif" font-weight="800" text-anchor="'+a+'" letter-spacing="'+(ls==null?0:ls)+'"';
+    return '<text x="'+(x+1.5)+'" y="'+(y+1.5)+'" font-size="'+s+'" fill="#00000042"'+f+'>'+t+'</text><text x="'+(x-1)+'" y="'+(y-1)+'" font-size="'+s+'" fill="#ffffff8c"'+f+'>'+t+'</text><text x="'+x+'" y="'+y+'" font-size="'+s+'" fill="'+fill+'"'+f+'>'+t+'</text>';}
+  function txt(t,x,y,s,fill,anchor,extra){return '<text x="'+x+'" y="'+y+'" font-size="'+s+'" fill="'+fill+'" font-family="Arial, Helvetica, sans-serif" text-anchor="'+(anchor||"middle")+'" '+(extra||'')+'>'+t+'</text>';}
+  function bhFlag(x,y,w,h){var wb=w*0.30,tooth=w*0.16,seg=h/5,p="M0,0 L"+wb+",0";for(var i=0;i<5;i++){p+=" L"+(wb+tooth)+","+((i+0.5)*seg)+" L"+wb+","+((i+1)*seg);}p+=" L0,"+h+" Z";
+    return '<g transform="translate('+x+','+y+')"><rect width="'+w+'" height="'+h+'" fill="#ce1126" stroke="#0006" stroke-width="1"/><path d="'+p+'" fill="#fff"/></g>';}
+  function bhMicro(id){return '<pattern id="'+id+'" width="160" height="26" patternUnits="userSpaceOnUse" patternTransform="rotate(-20)"><text x="0" y="11" font-size="7" fill="#e8ebf1" font-family="Arial">مملكة البحرين · KINGDOM OF BAHRAIN</text></pattern>';}
+  function fit(n,base){var L=(''+n).length;return L<=3?base:L==4?base-8:L==5?base-16:base-24;}
+  function ksa(x,y,sc){return '<g transform="translate('+x+','+y+') scale('+sc+')" stroke="#0a7a3b" stroke-width="2.4" fill="none" stroke-linecap="round"><path d="M-11,9 L11,-6"/><path d="M11,9 L-11,-6"/><path d="M0,-3 C-5,-12 5,-12 0,-21 C6,-12 -6,-12 0,-3 Z" fill="#0a7a3b" stroke="none"/></g>';}
+  function qBand(h){var seg=h/9,p="M0,0 L34,0 L34,"+h+" L0,"+h;for(var i=9;i>0;i--){p+=" L14,"+((i-0.5)*seg)+" L0,"+((i-1)*seg);}p+=" Z";return '<path d="'+p+'" fill="#7a1830"/>';}
+  function qRibbon(x,y,sc){return '<g transform="translate('+x+','+y+') scale('+sc+')" fill="#7a1830"><path d="M0,-11 C7,-7 7,-1 0,3 C-7,7 -7,13 0,17 C-5,12 5,8 0,3 C5,-1 -5,-6 0,-11 Z"/></g>';}
+
+  var COUNTRIES={
+    Bahrain:{types:{
+      Private:{W:560,H:132,def:"344992",svg:function(n){var s=fit(n,96),cy=66+s*0.35;
+        return '<svg viewBox="0 0 560 132"><defs>'+bhMicro("mb1")+'</defs><rect x="2" y="2" width="556" height="128" rx="12" fill="#f8f8f4" stroke="#1c1c1c" stroke-width="3"/><rect x="6" y="6" width="548" height="120" rx="9" fill="url(#mb1)" opacity="0.55"/>'+bhFlag(24,42,80,50)+emb(n,250,cy,s,NAVY,"middle",1)+txt("البحرين",548,56,27,NAVY,"end",'font-weight="700" textLength="92" lengthAdjust="spacingAndGlyphs"')+emb("BAHRAIN",548,94,22,NAVY,"end",1)+'</svg>';}},
+      Motorbike:{W:250,H:212,def:"1109",svg:function(n){var s=(''+n).length<=3?96:84;
+        return '<svg viewBox="0 0 250 212"><defs>'+bhMicro("mb2")+'</defs><rect x="3" y="3" width="244" height="206" rx="14" fill="#f3f3ef" stroke="'+NAVY+'" stroke-width="4"/><rect x="10" y="10" width="230" height="192" rx="9" fill="url(#mb2)" opacity="0.55"/><rect x="12" y="12" width="226" height="188" rx="8" fill="none" stroke="'+NAVY+'" stroke-width="1.5"/>'+emb("BRN",34,62,26,NAVY,"start",0)+bhFlag(112,40,34,24)+txt("البحرين",236,62,24,NAVY,"end",'font-weight="700"')+emb(n,125,178,s,NAVY,"middle",1)+'</svg>';}},
+      "Pickup (orange)":{W:560,H:140,def:"6436",svg:function(n){var s=fit(n,96);
+        return '<svg viewBox="0 0 560 140"><defs><clipPath id="pc"><rect x="2" y="2" width="556" height="136" rx="12"/></clipPath></defs><rect x="2" y="2" width="556" height="136" rx="12" fill="#f8f8f4" stroke="#1c1c1c" stroke-width="3"/><g clip-path="url(#pc)"><rect x="0" y="0" width="560" height="56" fill="#e8632a"/></g>'+emb("BAHRAIN",44,44,30,"#141414","start",1)+txt("البحرين",544,46,38,"#141414","end",'font-weight="800"')+emb(n,280,124,s,"#141414","middle",2)+'</svg>';}}
+    }},
+    Kuwait:{types:{
+      Private:{W:560,H:126,def:"85538",svg:function(n){var s=fit(n,78),cy=63+s*0.35;
+        return '<svg viewBox="0 0 560 126"><rect x="2" y="2" width="556" height="122" rx="11" fill="#f4f4f1" stroke="#161616" stroke-width="3"/><rect x="6" y="6" width="548" height="114" rx="8" fill="none" stroke="#8a8a8a" stroke-width="1"/>'+txt("دولة الكويت",150,46,25,"#141414","end",'font-weight="700"')+emb("KUWAIT",150,86,23,"#141414","end",1)+'<line x1="170" y1="20" x2="170" y2="106" stroke="#141414" stroke-width="2"/>'+emb("10",214,cy,s,"#141414","middle",1)+emb(n,400,cy,s,"#141414","middle",1)+'</svg>';}},
+      Motorbike:{W:222,H:200,def:"101",svg:function(n){
+        return '<svg viewBox="0 0 222 200"><rect x="3" y="3" width="216" height="194" rx="12" fill="#f4f4f1" stroke="#161616" stroke-width="4"/><rect x="26" y="10" width="188" height="180" rx="6" fill="none" stroke="#141414" stroke-width="1.5"/><g transform="translate(17,100) rotate(-90)">'+txt("KUWAIT",0,0,17,"#141414","middle",'font-weight="800" letter-spacing="1"')+'</g>'+txt("دولة الكويت",122,42,22,"#141414","middle",'font-weight="700"')+emb(n,122,120,72,"#141414","middle",1)+txt("دراجة",122,165,20,"#141414","middle",'')+'</svg>';}}
+    }},
+    "Saudi Arabia":{types:{
+      Private:{W:380,H:188,def:"9451",svg:function(n){var arL="أ ب ح",laL="A B H";
+        return '<svg viewBox="0 0 380 188"><rect x="2" y="2" width="376" height="184" rx="12" fill="#f7f7f4" stroke="#161616" stroke-width="3"/>'+txt("السعودية",150,26,16,"#141414","middle",'')+'<line x1="8" y1="104" x2="296" y2="104" stroke="#141414" stroke-width="2"/>'+txt(toAr(n),24,86,40,"#141414","start",'font-weight="700"')+txt(arL,286,86,34,"#141414","end",'')+emb(n,24,162,46,"#141414","start",1)+emb(laL,286,160,40,"#141414","end",2)+'<line x1="302" y1="8" x2="302" y2="180" stroke="#141414" stroke-width="3"/>'+txt("KSA",341,32,16,"#141414","middle",'font-weight="800"')+ksa(341,96,1.15)+'<circle cx="341" cy="150" r="11" fill="#dfe3ea" stroke="#b7bdc8"/></svg>';}},
+      Motorbike:{W:212,H:178,def:"9451",svg:function(n){
+        return '<svg viewBox="0 0 212 178"><rect x="3" y="3" width="206" height="172" rx="11" fill="#f7f7f4" stroke="#161616" stroke-width="4"/>'+txt("السعودية",90,30,15,"#141414","middle",'')+ksa(180,34,0.8)+txt(toAr(n)+"  أ ب ح",100,84,28,"#141414","middle",'')+'<line x1="16" y1="98" x2="196" y2="98" stroke="#141414" stroke-width="1.5"/>'+emb(n+"  A B H",106,150,32,"#141414","middle",1)+'</svg>';}}
+    }},
+    Qatar:{types:{
+      Private:{W:470,H:196,def:"000000",svg:function(n){var s=fit(n,84);
+        return '<svg viewBox="0 0 470 196"><rect x="2" y="2" width="466" height="192" rx="16" fill="#fbfbf9" stroke="#141414" stroke-width="4"/><g transform="translate(10,14)">'+qBand(168)+'</g>'+txt("QATAR",27,98,15,"#fff","middle",'font-weight="800" transform="rotate(-90 27 98)" letter-spacing="1"')+txt("قطر",180,72,42,"#141414","end",'font-weight="700"')+qRibbon(210,56,1.3)+emb(n,275,142,s,"#141414","middle",5)+'<circle cx="442" cy="40" r="9" fill="#e6e6e2" stroke="#bcbcb6"/></svg>';}},
+      "Commercial (black)":{W:470,H:196,def:"259559",svg:function(n){var s=fit(n,84);
+        return '<svg viewBox="0 0 470 196"><rect x="2" y="2" width="466" height="192" rx="16" fill="#111" stroke="#000" stroke-width="4"/><g transform="translate(30,98) rotate(-90)">'+txt("QATAR",0,0,16,"#fff","middle",'font-weight="800" letter-spacing="2"')+'</g>'+txt("قطر",255,66,40,"#fff","middle",'font-weight="700"')+txt(n,255,152,s,"#fff","middle",'font-weight="800" letter-spacing="5"')+'</svg>';}},
+      Motorcycle:{W:230,H:200,def:"4555",svg:function(n){
+        return '<svg viewBox="0 0 230 200"><rect x="3" y="3" width="224" height="194" rx="12" fill="#fbfbf9" stroke="#141414" stroke-width="4"/>'+txt("قطر",115,52,30,"#141414","middle",'font-weight="700"')+emb(n,115,132,66,"#141414","middle",2)+txt("QATAR",115,176,20,"#141414","middle",'letter-spacing="2"')+'</svg>';}}
+    }},
+    Oman:{types:{
+      Private:{W:520,H:158,def:"7291",svg:function(n){var s=fit(n,86),cy=79+s*0.34;
+        return '<svg viewBox="0 0 520 158"><rect x="2" y="2" width="516" height="154" rx="12" fill="#f3c218" stroke="#141414" stroke-width="4"/>'+emb(n,150,cy,s,"#141414","middle",2)+'<line x1="272" y1="14" x2="272" y2="144" stroke="#141414" stroke-width="3"/><line x1="360" y1="14" x2="360" y2="144" stroke="#141414" stroke-width="3"/>'+txt("أ",316,66,30,"#141414","middle",'')+txt("A",316,120,30,"#141414","middle",'font-weight="800"')+txt("عُمان",445,96,44,"#141414","middle",'font-weight="700"')+'</svg>';}},
+      Motorbike:{W:240,H:200,def:"7291",svg:function(n){
+        return '<svg viewBox="0 0 240 200"><rect x="3" y="3" width="234" height="194" rx="12" fill="#f3c218" stroke="#141414" stroke-width="4"/><line x1="88" y1="12" x2="88" y2="188" stroke="#141414" stroke-width="3"/>'+txt("ل ك",50,70,28,"#141414","middle",'')+emb("LK",50,150,34,"#141414","middle",1)+txt("عُمان",166,66,34,"#141414","middle",'font-weight="700"')+emb(n,166,150,64,"#141414","middle",2)+'</svg>';}}
+    }},
+    UAE:{types:(function(){
+      var EM={"Abu Dhabi":{code:"11",ar:"أبوظبي",red:true},"Dubai":{code:"I",ar:"دبي"},"Sharjah":{code:"2",ar:"الشارقة"},"Ajman":{code:"B",ar:"عجمان"},"Fujairah":{code:"A",ar:"الفجيرة"},"Ras Al Khaimah":{code:"C",ar:"رأس الخيمة"},"Umm Al Quwain":{code:"5",ar:"أم القيوين"}};
+      var out={};
+      Object.keys(EM).forEach(function(name){var e=EM[name];
+        out[name]={W:540,H:120,def:"51651",svg:function(n){var s=fit(n,74),cy=60+s*0.35;
+          var head=e.red?'<rect x="6" y="6" width="210" height="42" rx="6" fill="#d21e2b"/>'+txt(e.ar+" · U.A.E",16,34,15,"#fff","start",'')+'<rect x="158" y="12" width="52" height="30" rx="4" fill="#fff"/>'+txt(e.code,184,35,20,"#d21e2b","middle",'font-weight="800"'):txt(name.toUpperCase()+" · "+e.ar,16,34,16,"#141414","start",'')+txt(e.code,524,36,24,"#141414","end",'font-weight="800"');
+          return '<svg viewBox="0 0 540 120"><rect x="2" y="2" width="536" height="116" rx="11" fill="#f7f7f4" stroke="#141414" stroke-width="3"/>'+head+emb(n,290,cy+8,s,"#141414","middle",2)+'</svg>';};});
+      return out;
+    })()}
+  };
+
+  var curC="Bahrain", curT="Private", frame="black", num="344992", rx=-10, ry=-24, vx=0, vy=0, drag=false, lx=0, ly=0, auto=true;
+  var cuboid=document.getElementById('cuboid');
+  var FRAME={black:{a:'#4a4a4a',b:'#0e0e0e'},steel:{a:'#eef1f4',b:'#aeb5bf'},gold:{a:'#e6c37a',b:'#a9822f'}};
+  function T(){return COUNTRIES[curC].types[curT];}
+  function build(){var t=T(),W=t.W,H=t.H,f=FRAME[frame],eH='linear-gradient('+f.a+','+f.b+')',eV='linear-gradient(90deg,'+f.a+','+f.b+')';
+    cuboid.style.width=W+'px';cuboid.style.height=H+'px';
+    function E(w,h,tf,bg){return '<div class="edge" style="width:'+w+'px;height:'+h+'px;margin-left:'+(-w/2)+'px;margin-top:'+(-h/2)+'px;transform:'+tf+';background:'+bg+'"></div>';}
+    var front='<div class="face" style="width:'+W+'px;height:'+H+'px;margin-left:'+(-W/2)+'px;margin-top:'+(-H/2)+'px;transform:translateZ('+(D/2)+'px)">'+t.svg(num)+'</div>';
+    var back='<div class="face" style="width:'+W+'px;height:'+H+'px;margin-left:'+(-W/2)+'px;margin-top:'+(-H/2)+'px;transform:rotateY(180deg) translateZ('+(D/2)+'px);background:linear-gradient(#20262f,#0e1218)"></div>';
+    cuboid.innerHTML=front+back+E(D,H,'rotateY(90deg) translateZ('+(W/2)+'px)',eV)+E(D,H,'rotateY(-90deg) translateZ('+(W/2)+'px)',eV)+E(W,D,'rotateX(90deg) translateZ('+(H/2)+'px)',eH)+E(W,D,'rotateX(-90deg) translateZ('+(H/2)+'px)',eH);
+  }
+  function tick(){if(!drag){ry+=vy;rx+=vx;vy*=0.93;vx*=0.93;if(auto)ry+=0.18;}if(rx>16)rx=16;if(rx<-22)rx=-22;cuboid.style.transform='rotateX('+rx+'deg) rotateY('+ry+'deg)';requestAnimationFrame(tick);}
+  var stage=document.getElementById('stage');
+  function P(e){return e.touches?e.touches[0]:e;}
+  stage.addEventListener('pointerdown',function(e){drag=true;auto=false;var s=document.getElementById('spin');s.classList.remove('on');s.textContent='▶ Spin';var p=P(e);lx=p.clientX;ly=p.clientY;});
+  window.addEventListener('pointermove',function(e){if(!drag)return;var p=P(e);vy=(p.clientX-lx)*0.35;vx=-(p.clientY-ly)*0.35;ry+=vy;rx+=vx;lx=p.clientX;ly=p.clientY;});
+  window.addEventListener('pointerup',function(){drag=false;});
+  var cc=document.getElementById('countries'), tc=document.getElementById('types');
+  function buildTypes(){tc.innerHTML='';Object.keys(COUNTRIES[curC].types).forEach(function(k){var b=document.createElement('div');b.className='chip'+(k===curT?' on':'');b.textContent=k;b.onclick=function(){curT=k;num=T().def;document.getElementById('num').value=num;[].forEach.call(tc.children,function(x){x.classList.remove('on');});b.classList.add('on');build();};tc.appendChild(b);});}
+  Object.keys(COUNTRIES).forEach(function(k){var b=document.createElement('div');b.className='chip'+(k===curC?' on':'');b.textContent=k;b.onclick=function(){curC=k;curT=Object.keys(COUNTRIES[k].types)[0];num=T().def;document.getElementById('num').value=num;[].forEach.call(cc.children,function(x){x.classList.remove('on');});b.classList.add('on');buildTypes();build();};cc.appendChild(b);});
+  document.getElementById('num').addEventListener('input',function(){num=(this.value||'').replace(/[^0-9]/g,'')||'0';build();});
+  document.getElementById('frames').addEventListener('click',function(e){if(e.target.dataset.f){frame=e.target.dataset.f;[].forEach.call(this.children,function(x){x.classList.remove('on');});e.target.classList.add('on');build();}});
+  document.getElementById('spin').addEventListener('click',function(){auto=!auto;this.classList.toggle('on',auto);this.textContent=(auto?'⏸':'▶')+' Spin';});
+  buildTypes(); build(); tick();
+})();
+</script>
+</body>
+</html>
