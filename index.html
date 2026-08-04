@@ -125,9 +125,12 @@
     var front='<div class="face" style="width:'+W+'px;height:'+H+'px;margin-left:'+(-W/2)+'px;margin-top:'+(-H/2)+'px;transform:translateZ('+(D/2)+'px)">'+t.svg(num)+'</div>';
     var back='<div class="face" style="width:'+W+'px;height:'+H+'px;margin-left:'+(-W/2)+'px;margin-top:'+(-H/2)+'px;transform:rotateY(180deg) translateZ('+(D/2)+'px);background:linear-gradient(#20262f,#0e1218)"></div>';
     cuboid.innerHTML=front+back+E(D,H,'rotateY(90deg) translateZ('+(W/2)+'px)',eV)+E(D,H,'rotateY(-90deg) translateZ('+(W/2)+'px)',eV)+E(W,D,'rotateX(90deg) translateZ('+(H/2)+'px)',eH)+E(W,D,'rotateX(-90deg) translateZ('+(H/2)+'px)',eH);
+    fitScene();
   }
   function tick(){if(!drag){ry+=vy;rx+=vx;vy*=0.93;vx*=0.93;if(auto)ry+=0.18;}if(rx>16)rx=16;if(rx<-22)rx=-22;cuboid.style.transform='rotateX('+rx+'deg) rotateY('+ry+'deg)';requestAnimationFrame(tick);}
-  var stage=document.getElementById('stage');
+  var stage=document.getElementById('stage'), scene=document.getElementById('scene');
+  function fitScene(){var t=T();var w=stage.clientWidth-28,h=stage.clientHeight-44;var s=Math.min(1,w/t.W,h/t.H);scene.style.transform='scale('+(s*0.94).toFixed(3)+')';}
+  window.addEventListener('resize',fitScene);
   function P(e){return e.touches?e.touches[0]:e;}
   stage.addEventListener('pointerdown',function(e){drag=true;auto=false;var s=document.getElementById('spin');s.classList.remove('on');s.textContent='▶ Spin';var p=P(e);lx=p.clientX;ly=p.clientY;});
   window.addEventListener('pointermove',function(e){if(!drag)return;var p=P(e);vy=(p.clientX-lx)*0.35;vx=-(p.clientY-ly)*0.35;ry+=vy;rx+=vx;lx=p.clientX;ly=p.clientY;});
