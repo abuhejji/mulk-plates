@@ -35,6 +35,14 @@
   .seg button{border:0;background:transparent;color:var(--mut);font-weight:700;font-size:12px;padding:6px 11px;border-radius:999px;cursor:pointer;font-family:inherit}
   .seg button.on{background:var(--gold);color:#0a1120}
   .cap{text-align:center;color:var(--mut);font-size:11px;margin-top:12px}
+  .valbox{max-width:440px;margin:16px auto 0;background:var(--card);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:14px 16px;text-align:center}
+  .valrow{display:flex;align-items:center;justify-content:center;gap:8px}
+  .vall{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.12em}
+  .valq{width:19px;height:19px;border-radius:50%;border:1px solid var(--gold);background:transparent;color:var(--gold);font-size:11px;font-weight:800;cursor:pointer;line-height:1;padding:0}
+  .valamt{font-size:23px;font-weight:800;margin-top:6px;color:#f2f5fa}
+  .valtier{font-size:12px;color:var(--gold);margin-top:3px}
+  .valnote{font-size:11px;color:var(--mut);margin-top:9px;display:none;line-height:1.55}
+  .valreport{margin-top:11px;background:transparent;border:0;color:#8b99b8;font-size:11.5px;text-decoration:underline;cursor:pointer;font-family:inherit}
 </style>
 </head>
 <body>
@@ -52,6 +60,14 @@
     <button id="spin" class="chip on">⏸ Spin</button>
   </div>
   <p class="cap">Private plates only · proportions reflect real plates · emblems &amp; typeface are close approximations of official artwork.</p>
+
+  <div id="valbox" class="valbox">
+    <div class="valrow"><span class="vall">Estimated market value</span><button id="valq" class="valq" title="How is this calculated?">?</button></div>
+    <div id="valamt" class="valamt">—</div>
+    <div id="valtier" class="valtier"></div>
+    <div id="valnote" class="valnote"></div>
+    <button id="valreport" class="valreport">Think this is wrong? Tell us →</button>
+  </div>
 </div>
 
 <script>
@@ -125,7 +141,7 @@
     var front='<div class="face" style="width:'+W+'px;height:'+H+'px;margin-left:'+(-W/2)+'px;margin-top:'+(-H/2)+'px;transform:translateZ('+(D/2)+'px)">'+t.svg(num)+'</div>';
     var back='<div class="face" style="width:'+W+'px;height:'+H+'px;margin-left:'+(-W/2)+'px;margin-top:'+(-H/2)+'px;transform:rotateY(180deg) translateZ('+(D/2)+'px);background:linear-gradient(#20262f,#0e1218)"></div>';
     cuboid.innerHTML=front+back+E(D,H,'rotateY(90deg) translateZ('+(W/2)+'px)',eV)+E(D,H,'rotateY(-90deg) translateZ('+(W/2)+'px)',eV)+E(W,D,'rotateX(90deg) translateZ('+(H/2)+'px)',eH)+E(W,D,'rotateX(-90deg) translateZ('+(H/2)+'px)',eH);
-    fitScene();
+    fitScene();scheduleVal();
   }
   function tick(){if(!drag){ry+=vy;rx+=vx;vy*=0.93;vx*=0.93;if(auto)ry+=0.18;}if(rx>16)rx=16;if(rx<-22)rx=-22;cuboid.style.transform='rotateX('+rx+'deg) rotateY('+ry+'deg)';requestAnimationFrame(tick);}
   var stage=document.getElementById('stage'), scene=document.getElementById('scene');
@@ -141,6 +157,25 @@
   document.getElementById('num').addEventListener('input',function(){num=(this.value||'').replace(/[^0-9]/g,'')||'0';build();});
   document.getElementById('frames').addEventListener('click',function(e){if(e.target.dataset.f){frame=e.target.dataset.f;[].forEach.call(this.children,function(x){x.classList.remove('on');});e.target.classList.add('on');build();}});
   document.getElementById('spin').addEventListener('click',function(){auto=!auto;this.classList.toggle('on',auto);this.textContent=(auto?'⏸':'▶')+' Spin';});
+  // ---- Live plate valuation (supply/demand model) + report control ----
+  var SBURL='https://xgqnenkkfxkpevdyppuf.supabase.co', SBKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhncW5lbmtrZnhrcGV2ZHlwcHVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxOTI1NjcsImV4cCI6MjA5ODc2ODU2N30.qT6ffPiWDX9rUnvGEVg9e3wmNfDuo3G4LBADz6aGqbI';
+  function mapCountry(){if(curC==='UAE'){return curT==='Abu Dhabi'?'UAE-Abu Dhabi':'UAE-Dubai';}return curC;}
+  function fmtUSD(x){x=+x||0;if(x>=1e6)return '$'+(x/1e6).toFixed(x%1e6?1:0)+'M';if(x>=1e3)return '$'+Math.round(x/1e3)+'k';return '$'+x;}
+  var lastVal=null,valTimer;
+  function loadVal(){var c=mapCountry();
+    fetch(SBURL+'/rest/v1/rpc/estimate_plate_value',{method:'POST',headers:{apikey:SBKEY,Authorization:'Bearer '+SBKEY,'Content-Type':'application/json'},body:JSON.stringify({p_country:c,p_plate:num})})
+    .then(function(r){return r.json();}).then(function(d){lastVal=d;var a=document.getElementById('valamt'),t=document.getElementById('valtier'),nt=document.getElementById('valnote');if(!a)return;if(!d||d.error){a.textContent='—';t.textContent='';return;}
+      a.textContent=(d.est_high_usd<=500?'Near face value':(fmtUSD(d.est_low_usd)+' – '+fmtUSD(d.est_high_usd)));
+      t.textContent=d.tier+((d.pattern&&d.pattern!=='none')?(' · '+d.pattern+' ×'+d.premium_multiplier):'');
+      nt.textContent='Supply-and-demand estimate from classifieds & auction data for '+c.replace('UAE-','')+'. Rare plates vary widely — a guide, not an appraisal.';
+    }).catch(function(){});
+  }
+  function scheduleVal(){clearTimeout(valTimer);valTimer=setTimeout(loadVal,350);}
+  document.getElementById('valq').onclick=function(){var n=document.getElementById('valnote');n.style.display=(n.style.display==='block')?'none':'block';};
+  document.getElementById('valreport').onclick=function(){var g=prompt('What value (USD) do you think this plate is worth?');if(g===null)return;var note=prompt('Anything we should know? (optional)')||'';var btn=this;
+    fetch(SBURL+'/rest/v1/valuation_feedback',{method:'POST',headers:{apikey:SBKEY,Authorization:'Bearer '+SBKEY,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({asset_type:'plate',asset_key:mapCountry()+':'+num,shown_value_usd:lastVal?lastVal.est_high_usd:null,suggested_value_usd:parseFloat((g||'').replace(/[^0-9.]/g,''))||null,note:note})})
+    .then(function(){btn.textContent='Thanks — noted. We’ll refine it.';}).catch(function(){btn.textContent='Could not send — try again later.';});
+  };
   buildTypes(); build(); tick();
 })();
 </script>
